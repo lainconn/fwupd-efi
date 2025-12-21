@@ -1,0 +1,38 @@
+name: CI-clang
+on:
+  push:
+    branches: [ ci-clang ]
+
+
+permissions:
+  contents: read
+
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run pre-commit hooks
+        run: |
+         ./contrib/setup
+         source venv/bin/activate
+         sed -i "/no-commit-to-branch/,+1d" .pre-commit-config.yaml
+         pre-commit run --all-files
+  
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Update & Install Dependencies
+        run: |
+          apk update
+          apk add --no-cache clang clang-dev \
+            llvm llvm-dev gnu-efi gnu-efi-dev \
+            py3-pefile meson ninja
+      - name: Clang build
+        run: |
+          CC=clang meson setup build -Defi-libdir=/usr/lib
+          ninja -C build
